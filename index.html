@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyrox Training Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f0f0f;--bg2:#181818;--bg3:#222222;--border:#2a2a2a;--border2:#333333;--text:#f0ede8;--text2:#888880;--text3:#555550;--green:#3ddc97;--green-dim:rgba(61,220,151,0.12);--purple:#a78bfa;--purple-dim:rgba(167,139,250,0.12);--amber:#f59e0b;--amber-dim:rgba(245,158,11,0.12);--red:#f87171;--blue:#60a5fa;--radius:8px;--radius-sm:5px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
+.mono{font-family:'DM Mono',monospace;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.header{border-bottom:0.5px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;}
+.header h1{font-size:18px;font-weight:600;letter-spacing:-0.3px;}
+.header p{font-size:12px;color:var(--text2);margin-top:2px;}
+.header-actions{display:flex;gap:8px;align-items:center;}
+.container{max-width:960px;margin:0 auto;padding:28px 32px;}
+.targets-banner{display:flex;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:24px;}
+.target-cell{flex:1;padding:14px 20px;border-right:0.5px solid var(--border);}
+.target-cell:last-child{border-right:none;}
+.target-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px;}
+.target-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;}
+.target-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;}
+.metric{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.metric-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;}
+.metric-value{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--text);line-height:1;}
+.metric-sub{font-size:11px;color:var(--text2);margin-top:4px;}
+.tab-row{display:flex;gap:2px;margin-bottom:20px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:3px;width:fit-content;}
+.tab{font-size:13px;padding:6px 16px;border-radius:6px;border:none;background:transparent;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+.tab:hover{color:var(--text);}
+.tab.active{background:var(--bg3);color:var(--text);font-weight:500;}
+.card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:14px;}
+.card-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;}
+.btn{font-size:13px;padding:8px 16px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--bg3);cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif;font-weight:500;transition:all 0.15s;}
+.btn:hover{border-color:var(--text3);}
+.btn-primary{background:var(--green);color:#0a1a12;border-color:var(--green);font-weight:600;}
+.btn-primary:hover{opacity:0.9;}
+.btn-sm{font-size:12px;padding:5px 12px;}
+.btn-ghost{background:transparent;border-color:var(--border);color:var(--text2);}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2);}
+.status{font-size:13px;padding:10px 14px;border-radius:var(--radius-sm);margin-bottom:14px;}
+.s-ok{background:var(--green-dim);color:var(--green);border:0.5px solid rgba(61,220,151,0.25);}
+.s-err{background:rgba(248,113,113,0.1);color:var(--red);border:0.5px solid rgba(248,113,113,0.25);}
+.run-table{width:100%;border-collapse:collapse;font-size:13px;}
+.run-table th{text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;border-bottom:0.5px solid var(--border);padding:0 8px 10px;}
+.run-table td{padding:11px 8px;border-bottom:0.5px solid var(--border);color:var(--text);vertical-align:middle;}
+.run-table tr:last-child td{border-bottom:none;}
+.run-table tbody tr{cursor:pointer;transition:background 0.1s;}
+.run-table tbody tr:hover td{background:var(--bg3);}
+.iv-table{width:100%;border-collapse:collapse;font-size:13px;}
+.iv-table th{text-align:center;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;border-bottom:0.5px solid var(--border);padding:0 4px 10px;}
+.iv-table td{padding:7px 4px;border-bottom:0.5px solid var(--border);text-align:center;color:var(--text);}
+.iv-table td:first-child{color:var(--text3);font-family:'DM Mono',monospace;font-size:12px;}
+.iv-table tr:last-child td{border-bottom:none;}
+.iv-table input{width:100%;font-size:13px;text-align:center;font-family:'DM Mono',monospace;padding:5px 4px;border-radius:4px;border:0.5px solid var(--border2);background:var(--bg3);color:var(--text);outline:none;}
+.iv-table input:focus{border-color:var(--text3);}
+.badge{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500;font-family:'DM Mono',monospace;}
+.b-train{background:var(--purple-dim);color:var(--purple);}
+.b-race{background:var(--green-dim);color:var(--green);}
+.b-close{background:var(--amber-dim);color:var(--amber);}
+.b-off{background:rgba(96,165,250,0.1);color:var(--blue);}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.05em;}
+.form-input{font-size:14px;font-family:'DM Sans',sans-serif;padding:8px 10px;border-radius:var(--radius-sm);border:0.5px solid var(--border2);background:var(--bg3);color:var(--text);outline:none;}
+.form-input:focus{border-color:var(--text3);}
+.phase-bar{display:flex;border-radius:4px;overflow:hidden;height:6px;}
+.phase-labels{display:flex;justify-content:space-between;margin-bottom:5px;}
+.phase-label{font-size:10px;font-weight:600;}
+.milestone{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);}
+.milestone:last-child{border-bottom:none;}
+.ms-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.ms-done{background:var(--green);}
+.ms-todo{background:var(--border2);}
+.insight{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:0.5px solid var(--border);}
+.insight:last-child{border-bottom:none;}
+.idot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:8px;}
+.insight-label{font-size:10px;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:3px;font-weight:600;}
+.insight-text{font-size:13px;color:var(--text);line-height:1.6;}
+.countdown-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.countdown-box{background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius);padding:16px;text-align:center;}
+.countdown-num{font-family:'DM Mono',monospace;font-size:32px;font-weight:500;line-height:1;}
+.countdown-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-top:5px;}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);}
+.legend-line{width:20px;height:2px;border-radius:1px;}
+.legend-box{width:10px;height:10px;border-radius:2px;}
+.note-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:3px;background:var(--amber-dim);color:var(--amber);font-family:'DM Mono',monospace;margin-left:6px;vertical-align:middle;}
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;}
+.hint{font-size:11px;color:var(--text3);margin-top:10px;padding-top:10px;border-top:0.5px solid var(--border);}
+.chart-wrap{position:relative;width:100%;}
+.detail-header{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.detail-title{font-size:15px;font-weight:500;}
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+.stat-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;}
+.stat-value{font-family:'DM Mono',monospace;font-size:18px;font-weight:500;}
+.sync-bar{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text3);padding:6px 0 14px;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--text3);flex-shrink:0;}
+.sync-dot.ok{background:var(--green);}
+.sync-dot.err{background:var(--red);}
+.sync-dot.loading{background:var(--amber);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@media(max-width:600px){
+  .header{padding:14px 16px;}
+  .header h1{font-size:15px;}
+  .container{padding:16px;}
+  .targets-banner{flex-wrap:wrap;}
+  .target-cell{flex:1 1 45%;border-right:none;border-bottom:0.5px solid var(--border);padding:10px 14px;}
+  .target-cell:last-child{border-bottom:none;}
+  .metrics{grid-template-columns:repeat(2,1fr);}
+  .tab-row{width:100%;overflow-x:auto;flex-wrap:nowrap;}
+  .tab{font-size:12px;padding:5px 10px;white-space:nowrap;}
+  .form-grid{grid-template-columns:repeat(2,1fr);}
+  .countdown-row{grid-template-columns:repeat(3,1fr);}
+  .countdown-num{font-size:22px;}
+  .stat-row{grid-template-columns:repeat(3,1fr);}
+  .run-table th,.run-table td{padding:8px 4px;font-size:12px;}
+  .iv-table th,.iv-table td{padding:6px 2px;font-size:11px;}
+  .card{padding:14px 14px;}
+  .btn-sm{font-size:11px;padding:5px 10px;}
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><h1>Hyrox Training Tracker</h1><p>Women's Doubles — Christchurch, Sep/Oct 2026</p></div>
+  <div class="header-actions">
+    <button class="btn btn-sm btn-ghost" onclick="exportCSV()">Export CSV</button>
+    <button class="btn btn-sm btn-primary" onclick="showPane('add')">+ Log run</button>
+  </div>
+</div>
+<div class="container">
+  <div id="statusWrap"></div>
+  <div class="sync-bar"><div class="sync-dot loading" id="syncDot"></div><span id="syncMsg">Connecting…</span></div>
+  <div class="targets-banner">
+    <div class="target-cell"><div class="target-label">Training target</div><div class="target-value" style="color:var(--purple)">5:00 – 5:30</div><div class="target-sub">per km · fresh legs</div></div>
+    <div class="target-cell"><div class="target-label">Race target</div><div class="target-value" style="color:var(--green)">6:00 – 6:30</div><div class="target-sub">per km · mid-Hyrox</div></div>
+    <div class="target-cell"><div class="target-label">Weeks to race</div><div class="target-value" style="color:var(--amber)" id="raceCountdown">—</div><div class="target-sub">placeholder: 10 Oct 2026</div></div>
+    <div class="target-cell"><div class="target-label">This week</div><div class="target-value" id="weekRuns">0</div><div class="target-sub">sessions logged</div></div>
+  </div>
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Sessions</div><div class="metric-value" id="m-runs">0</div></div>
+    <div class="metric"><div class="metric-label">Total run time</div><div class="metric-value" id="m-time">0</div><div class="metric-sub">minutes running</div></div>
+    <div class="metric"><div class="metric-label">Avg run pace</div><div class="metric-value mono" id="m-pace">—</div><div class="metric-sub">min / km</div></div>
+    <div class="metric"><div class="metric-label">Best interval</div><div class="metric-value mono" id="m-best">—</div><div class="metric-sub">min / km ever</div></div>
+  </div>
+  <div class="tab-row">
+    <button class="tab active" onclick="showPane('plan',this)">Race plan</button>
+    <button class="tab" onclick="showPane('nextrun',this)">Next run ↗</button>
+    <button class="tab" onclick="showPane('history',this)">History</button>
+    <button class="tab" onclick="showPane('trends',this)">Trends</button>
+    <button class="tab" onclick="showPane('insights',this)">Insights</button>
+  </div>
+
+  <!-- PLAN -->
+  <div id="pane-plan">
+    <div class="countdown-row">
+      <div class="countdown-box"><div class="countdown-num" id="cd-weeks" style="color:var(--amber)">—</div><div class="countdown-lbl">Weeks to go</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-phase" style="color:var(--green);font-size:20px;padding-top:6px;">—</div><div class="countdown-lbl">Current phase</div></div>
+      <div class="countdown-box"><div class="countdown-num" id="cd-week-num" style="color:var(--blue)">—</div><div class="countdown-lbl">Training week</div></div>
+    </div>
+    <div class="card"><div class="card-title">Periodisation</div><div id="phaseDetail"></div></div>
+    <div class="card"><div class="card-title">Milestones</div><div id="milestonesWrap"><div class="empty">Log some sessions to track milestones.</div></div></div>
+  </div>
+
+  <!-- NEXT RUN -->
+  <div id="pane-nextrun" style="display:none;">
+    <div id="nextRunCard"><div class="empty">Log a session first to generate your next run focus.</div></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div id="pane-history" style="display:none;">
+    <div class="card" id="historyCard"><div class="empty">No sessions yet.</div></div>
+    <div id="pane-detail" style="display:none;">
+      <div class="detail-header">
+        <button class="btn btn-sm btn-ghost" onclick="closeDetail()">← Back</button>
+        <span class="detail-title" id="detail-title"></span>
+      </div>
+      <div id="detail-stats" class="stat-row"></div>
+      <div class="card"><div class="card-title">Interval breakdown</div><div id="detail-intervals"></div></div>
+      <div class="card">
+        <div class="card-title">Pace by interval</div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-box" style="background:var(--purple-dim);border:0.5px solid var(--purple);"></div>Training target</div>
+          <div class="legend-item"><div class="legend-box" style="background:var(--green-dim);border:0.5px solid var(--green);"></div>Race target</div>
+        </div>
+        <div class="chart-wrap" style="height:220px;"><canvas id="cDetail"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRENDS -->
+  <div id="pane-trends" style="display:none;">
+    <div class="card">
+      <div class="card-title">Avg run pace per session</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-line" style="background:var(--blue);"></div>1:30 protocol</div>
+        <div class="legend-item"><div class="legend-line" style="background:var(--amber);"></div>2:00+ protocol</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--purple-dim);border:0.5px solid var(--purple);"></div>Training target</div>
+        <div class="legend-item"><div class="legend-box" style="background:var(--green-dim);border:0.5px solid var(--green);"></div>Race target</div>
+      </div>
+      <div class="chart-wrap" style="height:230px;"><canvas id="cPace"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Weekly run volume (minutes)</div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="cVolume"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Run : walk ratio per session</div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-box" style="background:var(--green);"></div>Running</div>
+        <div class="legend-item"><div class="legend-box" style="background:#334155;"></div>Walking</div>
+      </div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="cRatio"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Pace consistency — spread between fastest and slowest interval (lower = more consistent)</div>
+      <div class="chart-wrap" style="height:190px;"><canvas id="cSpread"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Avg cadence per session (spm)</div>
+      <div class="chart-wrap" style="height:170px;"><canvas id="cCad"></canvas></div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div id="pane-insights" style="display:none;">
+    <div class="card" id="insightsCard"><div class="empty">Log a session to unlock insights.</div></div>
+  </div>
+
+  <!-- ADD -->
+  <div id="pane-add" style="display:none;">
+    <div class="card">
+      <div class="card-title">Session details</div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Date</label><input class="form-input" type="date" id="f-date"></div>
+        <div class="form-group"><label class="form-label">Run interval (sec)</label><input class="form-input" type="number" id="f-run-sec" placeholder="e.g. 90"></div>
+        <div class="form-group"><label class="form-label">Walk interval (sec)</label><input class="form-input" type="number" id="f-walk-sec" placeholder="e.g. 60"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label class="form-label">Reps</label><input class="form-input" type="number" id="f-reps" placeholder="e.g. 10"></div>
+        <div class="form-group"><label class="form-label">Warm-up (min)</label><input class="form-input" type="number" id="f-warmup" value="5"></div>
+        <div class="form-group"><label class="form-label">Cool-down (min)</label><input class="form-input" type="number" id="f-cooldown" value="5"></div>
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">Session note (optional)</label>
+        <input class="form-input" type="text" id="f-note" placeholder="e.g. Felt strong, hilly route, tired legs">
+      </div>
+      <button class="btn" onclick="buildIntervalTable()">Generate interval table</button>
+    </div>
+    <div class="card" id="intervalTableCard" style="display:none;">
+      <div class="card-title">Interval data — from Intervals Pro</div>
+      <div style="overflow-x:auto;">
+        <table class="iv-table">
+          <thead><tr><th>#</th><th>Dist (m)</th><th>Pace (mm:ss)</th><th>Cadence (spm)</th><th>Note</th></tr></thead>
+          <tbody id="intervalBody"></tbody>
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px;">Note column: flag anything unusual — "steep hill", "push interval", "felt easy"</div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn btn-primary" onclick="saveSession()">Save session</button>
+        <button class="btn btn-ghost" onclick="cancelAdd()">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL='https://xtjljeznqmbtesircvof.supabase.co';
+const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh0amxqZXpucW1idGVzaXJjdm9mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkyMzY4NzUsImV4cCI6MjA5NDgxMjg3NX0.ITmeO-oR51wYpIo933okKo-tQMO6o-vO8NCrbRdlDIY';
+const SUPA_HEADERS={'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'resolution=merge-duplicates'};
+
+function setSyncStatus(state, msg){
+  const dot=document.getElementById('syncDot');
+  const txt=document.getElementById('syncMsg');
+  dot.className='sync-dot'+(state==='ok'?' ok':state==='err'?' err':' loading');
+  txt.textContent=msg;
+}
+
+async function load(){
+  setSyncStatus('loading','Syncing…');
+  try{
+    const res=await fetch(SUPA_URL+'/rest/v1/sessions?select=*&order=date.asc',{headers:SUPA_HEADERS});
+    if(!res.ok)throw new Error('fetch failed');
+    const rows=await res.json();
+    if(rows.length>0){
+      sessions=rows.map(r=>calcStats(r.data));
+      setSyncStatus('ok','Synced');
+    } else {
+      // First time — seed with historical data
+      sessions=SEED.map(s=>calcStats(JSON.parse(JSON.stringify(s))));
+      await Promise.all(sessions.map(s=>supaUpsert(s)));
+      setSyncStatus('ok','Data seeded');
+    }
+  } catch(e){
+    // Fallback to localStorage if offline
+    try{const d=localStorage.getItem(STORE_KEY);if(d)sessions=JSON.parse(d);}catch(_){}
+    if(!sessions.length)sessions=SEED.map(s=>calcStats(JSON.parse(JSON.stringify(s))));
+    setSyncStatus('err','Offline — showing cached data');
+  }
+  render();
+}
+
+async function supaUpsert(s){
+  try{
+    await fetch(SUPA_URL+'/rest/v1/sessions',{
+      method:'POST',
+      headers:SUPA_HEADERS,
+      body:JSON.stringify({id:String(s.id),date:s.date,data:s,updated_at:new Date().toISOString()})
+    });
+  } catch(e){ console.warn('Supabase upsert failed',e); }
+}
+
+async function supaDelete(id){
+  try{
+    await fetch(SUPA_URL+'/rest/v1/sessions?id=eq.'+encodeURIComponent(String(id)),{
+      method:'DELETE',
+      headers:SUPA_HEADERS
+    });
+  } catch(e){ console.warn('Supabase delete failed',e); }
+}
+
+async function save(){
+  // Always keep localStorage as backup
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(sessions));}catch(_){}
+  setSyncStatus('loading','Saving…');
+  try{
+    await Promise.all(sessions.map(s=>supaUpsert(s)));
+    setSyncStatus('ok','Saved');
+  } catch(e){
+    setSyncStatus('err','Save failed — data kept locally');
+  }
+}
+
+const STORE_KEY='hyrox_tracker_v3';
+const RACE_DATE=new Date('2026-10-10');
+const TRAINING_START=new Date('2026-04-14');
+const TRAIN_MIN=5.0,TRAIN_MAX=5.5,RACE_MIN=6.0,RACE_MAX=6.5;
+const PHASES=[
+  {name:'Base',weeks:[1,8],color:'#3b82f6',desc:'Interval training 2–3× per week. Build consistency and run duration. Goal: complete every session. Pace will follow.'},
+  {name:'Build',weeks:[9,16],color:'#3ddc97',desc:'Extend run intervals, shorten walk breaks. Start merging intervals into longer continuous runs. Add functional training alongside.'},
+  {name:'Race-specific',weeks:[17,22],color:'#f59e0b',desc:'Continuous 8km runs at race pace. Brick sessions to simulate station fatigue. Build doubles rhythm with Jordan.'},
+  {name:'Taper',weeks:[23,26],color:'#f87171',desc:'Reduce volume, keep sharpness. Rest is training. Trust the work you\'ve put in.'},
+];
+
+function pp(str){if(!str||!str.toString().trim())return null;const s=str.toString().trim();if(s.includes(':')){const[m,sc]=s.split(':').map(Number);return isNaN(m)||isNaN(sc)?null:m+sc/60;}return parseFloat(s)||null;}
+
+const SEED=[
+  {date:'2026-04-16',runSec:90,walkSec:120,reps:8,warmup:5,cooldown:5,note:'',intervals:[{n:1,dist:255,pace:pp('5:52'),cad:163,note:''},{n:2,dist:233,pace:pp('6:26'),cad:160,note:''},{n:3,dist:224,pace:pp('6:41'),cad:160,note:''},{n:4,dist:223,pace:pp('6:43'),cad:157,note:''},{n:5,dist:242,pace:pp('6:11'),cad:161,note:''},{n:6,dist:225,pace:pp('6:40'),cad:161,note:''},{n:7,dist:205,pace:pp('7:19'),cad:158,note:''},{n:8,dist:192,pace:pp('7:48'),cad:154,note:''}]},
+  {date:'2026-04-20',runSec:90,walkSec:90,reps:8,warmup:5,cooldown:5,note:'',intervals:[{n:1,dist:253,pace:pp('5:55'),cad:161,note:''},{n:2,dist:233,pace:pp('6:26'),cad:162,note:''},{n:3,dist:233,pace:pp('6:26'),cad:163,note:''},{n:4,dist:226,pace:pp('6:38'),cad:161,note:''},{n:5,dist:225,pace:pp('6:40'),cad:161,note:''},{n:6,dist:219,pace:pp('6:50'),cad:159,note:''},{n:7,dist:208,pace:pp('7:12'),cad:159,note:''},{n:8,dist:234,pace:pp('6:24'),cad:161,note:''}]},
+  {date:'2026-04-23',runSec:90,walkSec:90,reps:10,warmup:5,cooldown:5,note:'',intervals:[{n:1,dist:251,pace:pp('5:58'),cad:161,note:''},{n:2,dist:235,pace:pp('6:22'),cad:161,note:''},{n:3,dist:236,pace:pp('6:21'),cad:160,note:''},{n:4,dist:234,pace:pp('6:24'),cad:159,note:''},{n:5,dist:223,pace:pp('6:43'),cad:159,note:''},{n:6,dist:210,pace:pp('7:08'),cad:157,note:''},{n:7,dist:217,pace:pp('6:54'),cad:157,note:''},{n:8,dist:213,pace:pp('7:02'),cad:159,note:''},{n:9,dist:239,pace:pp('6:16'),cad:161,note:''},{n:10,dist:249,pace:pp('6:01'),cad:160,note:''}]},
+  {date:'2026-04-25',runSec:90,walkSec:90,reps:10,warmup:5,cooldown:5,note:'',intervals:[{n:1,dist:251,pace:pp('5:58'),cad:166,note:''},{n:2,dist:252,pace:pp('5:57'),cad:166,note:''},{n:3,dist:231,pace:pp('6:29'),cad:164,note:''},{n:4,dist:224,pace:pp('6:41'),cad:164,note:''},{n:5,dist:229,pace:pp('6:33'),cad:165,note:''},{n:6,dist:228,pace:pp('6:34'),cad:164,note:''},{n:7,dist:226,pace:pp('6:38'),cad:163,note:''},{n:8,dist:221,pace:pp('6:47'),cad:162,note:''},{n:9,dist:233,pace:pp('6:26'),cad:164,note:''},{n:10,dist:287,pace:pp('5:13'),cad:169,note:'Push interval'}]},
+  {date:'2026-05-11',runSec:90,walkSec:90,reps:10,warmup:5,cooldown:5,note:'',intervals:[{n:1,dist:242,pace:pp('6:11'),cad:161,note:''},{n:2,dist:241,pace:pp('6:13'),cad:162,note:''},{n:3,dist:238,pace:pp('6:18'),cad:163,note:''},{n:4,dist:233,pace:pp('6:26'),cad:159,note:''},{n:5,dist:254,pace:pp('5:54'),cad:162,note:''},{n:6,dist:225,pace:pp('6:40'),cad:161,note:''},{n:7,dist:222,pace:pp('6:45'),cad:159,note:''},{n:8,dist:224,pace:pp('6:41'),cad:159,note:''},{n:9,dist:275,pace:pp('5:27'),cad:167,note:'Push interval'},{n:10,dist:234,pace:pp('6:24'),cad:160,note:''}]},
+  {date:'2026-05-14',runSec:90,walkSec:90,reps:10,warmup:5,cooldown:5,note:'Best session yet',intervals:[{n:1,dist:258,pace:pp('5:48'),cad:164,note:''},{n:2,dist:257,pace:pp('5:50'),cad:159,note:''},{n:3,dist:249,pace:pp('6:01'),cad:163,note:''},{n:4,dist:230,pace:pp('6:31'),cad:159,note:''},{n:5,dist:242,pace:pp('6:11'),cad:160,note:''},{n:6,dist:245,pace:pp('6:07'),cad:161,note:''},{n:7,dist:225,pace:pp('6:40'),cad:159,note:''},{n:8,dist:245,pace:pp('6:07'),cad:159,note:''},{n:9,dist:306,pace:pp('4:54'),cad:169,note:'Push interval'},{n:10,dist:250,pace:pp('6:00'),cad:161,note:''}]},
+  {date:'2026-05-19',runSec:120,walkSec:60,reps:10,warmup:5,cooldown:5,note:'First 2:00/1:00 session — hard!',intervals:[{n:1,dist:333,pace:pp('6:00'),cad:165,note:''},{n:2,dist:304,pace:pp('6:34'),cad:162,note:''},{n:3,dist:311,pace:pp('6:25'),cad:162,note:''},{n:4,dist:295,pace:pp('6:46'),cad:160,note:''},{n:5,dist:300,pace:pp('6:40'),cad:159,note:''},{n:6,dist:298,pace:pp('6:42'),cad:161,note:''},{n:7,dist:291,pace:pp('6:52'),cad:159,note:''},{n:8,dist:298,pace:pp('6:42'),cad:161,note:''},{n:9,dist:308,pace:pp('6:29'),cad:159,note:''},{n:10,dist:254,pace:pp('7:52'),cad:153,note:'Steep hill'}]},
+];
+
+function calcStats(s){
+  const paces=s.intervals.filter(iv=>iv.pace).map(iv=>iv.pace);
+  const cads=s.intervals.filter(iv=>iv.cad).map(iv=>iv.cad);
+  s.totalRunMin=Math.round(s.reps*s.runSec/60*10)/10;
+  s.totalWalkMin=Math.round(s.reps*s.walkSec/60*10)/10;
+  s.avgPace=paces.length?paces.reduce((a,b)=>a+b,0)/paces.length:null;
+  s.bestPace=paces.length?Math.min(...paces):null;
+  s.worstPace=paces.length?Math.max(...paces):null;
+  s.avgCad=cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):null;
+  s.totalDist=s.intervals.reduce((t,iv)=>t+(iv.dist||0),0);
+  if(!s.id)s.id=Date.now()+Math.random();
+  return s;
+}
+
+let sessions=[],charts={},detailChart=null;
+
+function load(){
+  try{
+    const d=localStorage.getItem(STORE_KEY);
+    if(d){sessions=JSON.parse(d);}
+    else{sessions=SEED.map(s=>calcStats(JSON.parse(JSON.stringify(s))));save();}
+  }catch(e){sessions=SEED.map(s=>calcStats(JSON.parse(JSON.stringify(s))));}
+}
+function save(){try{localStorage.setItem(STORE_KEY,JSON.stringify(sessions));}catch(e){}}
+
+function parsePace(str){return pp(str);}
+function fmtPace(dec){if(!dec||dec<=0)return'—';const m=Math.floor(dec),s=Math.round((dec-m)*60);return m+':'+String(s).padStart(2,'0');}
+function paceLabel(p){if(!p)return'';if(p<=TRAIN_MAX)return'<span class="badge b-train">Training ✓</span>';if(p<=RACE_MAX)return'<span class="badge b-race">Race ✓</span>';if(p<=RACE_MAX+0.5)return'<span class="badge b-close">Close</span>';return'<span class="badge b-off">Building</span>';}
+function iColor(p){if(!p)return'#334155';if(p<=TRAIN_MAX)return'#a78bfa';if(p<=RACE_MAX)return'#3ddc97';if(p<=RACE_MAX+0.5)return'#f59e0b';return'#60a5fa';}
+function today(){return new Date().toISOString().slice(0,10);}
+function protoStr(s){return`${s.reps}× ${Math.round(s.runSec/60*10)/10}min / ${Math.round(s.walkSec/60*10)/10}min walk`;}
+function fade(s){const lp=s.intervals.filter(iv=>iv.pace).map(iv=>iv.pace);if(lp.length<4)return null;const h=Math.floor(lp.length/2);return Math.round((lp.slice(h).reduce((a,b)=>a+b,0)/(lp.length-h)-lp.slice(0,h).reduce((a,b)=>a+b,0)/h)*60);}
+function spread(s){const lp=s.intervals.filter(iv=>iv.pace).map(iv=>iv.pace);if(lp.length<2)return null;return Math.round((Math.max(...lp)-Math.min(...lp))*60);}
+
+Chart.defaults.color='#555550';Chart.defaults.borderColor='#2a2a2a';Chart.defaults.font.family="'DM Sans',sans-serif";
+function cTick(v){const m=Math.floor(v),s=Math.round((v-m)*60);return m+':'+String(s).padStart(2,'0');}
+
+function buildIntervalTable(){
+  const reps=parseInt(document.getElementById('f-reps').value)||0;
+  if(!reps){showStatus('Enter number of reps first.','s-err');return;}
+  if(!document.getElementById('f-date').value)document.getElementById('f-date').value=today();
+  const tbody=document.getElementById('intervalBody');tbody.innerHTML='';
+  for(let i=1;i<=reps;i++)tbody.innerHTML+=`<tr><td>${i}</td><td><input type="number" id="iv-d-${i}" placeholder="e.g. 310"></td><td><input type="text" id="iv-p-${i}" placeholder="5:58"></td><td><input type="number" id="iv-c-${i}" placeholder="72"></td><td><input type="text" id="iv-n-${i}" placeholder="e.g. steep hill"></td></tr>`;
+  document.getElementById('intervalTableCard').style.display='block';
+  document.getElementById('intervalTableCard').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function saveSession(){
+  const date=document.getElementById('f-date').value||today();
+  const runSec=parseInt(document.getElementById('f-run-sec').value)||0;
+  const walkSec=parseInt(document.getElementById('f-walk-sec').value)||0;
+  const reps=parseInt(document.getElementById('f-reps').value)||0;
+  const warmup=parseFloat(document.getElementById('f-warmup').value)||0;
+  const cooldown=parseFloat(document.getElementById('f-cooldown').value)||0;
+  const note=document.getElementById('f-note').value||'';
+  if(!reps||!runSec){showStatus('Fill in reps and run interval length.','s-err');return;}
+  const intervals=[];
+  for(let i=1;i<=reps;i++)intervals.push({n:i,dist:parseFloat(document.getElementById('iv-d-'+i)?.value)||null,pace:parsePace(document.getElementById('iv-p-'+i)?.value),cad:parseInt(document.getElementById('iv-c-'+i)?.value)||null,note:document.getElementById('iv-n-'+i)?.value||''});
+  const s=calcStats({id:Date.now()+Math.random(),date,runSec,walkSec,reps,warmup,cooldown,note,intervals});
+  sessions.push(s);save();render();showStatus(`Session saved — ${reps} intervals, avg ${fmtPace(s.avgPace)}/km.`);cancelAdd();showPane('history');
+}
+
+function cancelAdd(){
+  document.getElementById('intervalTableCard').style.display='none';
+  document.getElementById('intervalBody').innerHTML='';
+  ['f-date','f-run-sec','f-walk-sec','f-reps','f-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-warmup').value='5';document.getElementById('f-cooldown').value='5';
+}
+
+async function deleteSession(id,e){
+  e.stopPropagation();if(!confirm('Delete this session?'))return;
+  sessions=sessions.filter(s=>s.id!==id);
+  await supaDelete(id);
+  save();render();closeDetail();
+}
+
+function showStatus(msg,cls='s-ok'){
+  const sw=document.getElementById('statusWrap');
+  sw.innerHTML=`<div class="status ${cls}">${msg}</div>`;
+  setTimeout(()=>sw.innerHTML='',5000);
+}
+
+function openDetail(idx){
+  const sorted=[...sessions].sort((a,b)=>b.date.localeCompare(a.date));
+  const s=sorted[idx];if(!s)return;
+  document.getElementById('historyCard').style.display='none';
+  document.getElementById('pane-detail').style.display='block';
+  document.getElementById('detail-title').textContent=s.date+' — '+protoStr(s)+(s.note?' · '+s.note:'');
+  const f=fade(s),sp=spread(s);
+  document.getElementById('detail-stats').innerHTML=`
+    <div class="stat-box"><div class="stat-label">Avg pace</div><div class="stat-value">${fmtPace(s.avgPace)}<span style="font-size:11px;color:var(--text2);font-family:'DM Sans',sans-serif;">/km</span></div></div>
+    <div class="stat-box"><div class="stat-label">Pace fade</div><div class="stat-value" style="color:${f===null?'var(--text3)':f>20?'var(--amber)':'var(--green)'}">${f===null?'—':f>0?'+'+f+'s':f+'s'}</div><div style="font-size:11px;color:var(--text3);">2nd half vs 1st half</div></div>
+    <div class="stat-box"><div class="stat-label">Pace spread</div><div class="stat-value" style="color:${sp===null?'var(--text3)':sp>90?'var(--amber)':'var(--green)'}">${sp===null?'—':sp+'s'}</div><div style="font-size:11px;color:var(--text3);">fastest → slowest interval</div></div>`;
+  document.getElementById('detail-intervals').innerHTML=`
+    <table class="iv-table" style="width:100%;">
+      <colgroup><col style="width:32px"><col style="width:65px"><col><col style="width:90px"><col style="width:auto"></colgroup>
+      <thead><tr><th>#</th><th>Dist</th><th>Pace</th><th>Cadence</th><th>Notes</th></tr></thead>
+      <tbody>${s.intervals.map(iv=>`<tr><td>${iv.n}</td><td>${iv.dist?iv.dist+'m':'—'}</td><td style="font-family:'DM Mono',monospace;font-weight:500;">${fmtPace(iv.pace)} ${paceLabel(iv.pace)}</td><td>${iv.cad?iv.cad+' spm':'—'}</td><td style="color:var(--text2);font-size:12px;">${iv.note||''}</td></tr>`).join('')}</tbody>
+    </table>
+    <button class="btn btn-ghost btn-sm" onclick="deleteSession(${s.id},event)" style="margin-top:12px;color:var(--red);border-color:rgba(248,113,113,0.3);">Delete session</button>`;
+  if(detailChart){detailChart.destroy();detailChart=null;}
+  const paced=s.intervals.filter(iv=>iv.pace);
+  if(paced.length){
+    detailChart=new Chart(document.getElementById('cDetail'),{
+      type:'bar',
+      data:{labels:paced.map(iv=>'#'+iv.n+(iv.note?'*':'')),datasets:[
+        {label:'Pace',data:paced.map(iv=>Math.round(iv.pace*100)/100),backgroundColor:paced.map(iv=>iColor(iv.pace)),borderRadius:4},
+        {label:'TMax',data:paced.map(()=>TRAIN_MAX),type:'line',borderColor:'rgba(167,139,250,0.6)',borderDash:[4,3],pointRadius:0,fill:'+1',backgroundColor:'rgba(167,139,250,0.06)'},
+        {label:'TMin',data:paced.map(()=>TRAIN_MIN),type:'line',borderColor:'rgba(167,139,250,0.6)',borderDash:[4,3],pointRadius:0,fill:false},
+        {label:'RMax',data:paced.map(()=>RACE_MAX),type:'line',borderColor:'rgba(61,220,151,0.5)',borderDash:[3,2],pointRadius:0,fill:'+1',backgroundColor:'rgba(61,220,151,0.05)'},
+        {label:'RMin',data:paced.map(()=>RACE_MIN),type:'line',borderColor:'rgba(61,220,151,0.5)',borderDash:[3,2],pointRadius:0,fill:false},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const iv=paced[ctx.dataIndex];return`${fmtPace(iv.pace)}/km${iv.note?' · '+iv.note:''}`;},}}},
+        scales:{x:{grid:{display:false},ticks:{color:'#555550',font:{size:11}}},y:{reverse:true,min:4.5,max:10,grid:{color:'#1e1e1e'},ticks:{color:'#555550',font:{size:11},callback:cTick}}}}
+    });
+  }
+}
+
+function closeDetail(){
+  document.getElementById('historyCard').style.display='block';
+  document.getElementById('pane-detail').style.display='none';
+  if(detailChart){detailChart.destroy();detailChart=null;}
+}
+
+function renderPlan(){
+  const now=new Date();
+  const weeksLeft=Math.max(0,Math.ceil((RACE_DATE-now)/(7*24*3600*1000)));
+  const weeksIn=Math.max(1,Math.round((now-TRAINING_START)/(7*24*3600*1000)));
+  document.getElementById('cd-weeks').textContent=weeksLeft;
+  document.getElementById('cd-week-num').textContent=weeksIn;
+  document.getElementById('raceCountdown').textContent=weeksLeft;
+  const phase=PHASES.find(p=>weeksIn>=p.weeks[0]&&weeksIn<=p.weeks[1])||PHASES[0];
+  document.getElementById('cd-phase').textContent=phase.name;
+  const wS=new Date(now);wS.setDate(now.getDate()-((now.getDay()+6)%7));
+  const wE=new Date(wS);wE.setDate(wS.getDate()+6);
+  document.getElementById('weekRuns').textContent=sessions.filter(s=>{const d=new Date(s.date);return d>=wS&&d<=wE;}).length;
+  const totalW=26,prog=Math.min(100,(weeksIn/totalW*100)).toFixed(1);
+  const bars=PHASES.map(p=>{const w=p.weeks[1]-p.weeks[0]+1;return`<div style="width:${(w/totalW*100).toFixed(1)}%;height:100%;background:${p.color};"></div>`;}).join('');
+  document.getElementById('phaseDetail').innerHTML=`
+    <div style="margin-bottom:14px;">
+      <div class="phase-labels">${PHASES.map(p=>`<span class="phase-label" style="color:${p.color}">${p.name}</span>`).join('')}</div>
+      <div class="phase-bar">${bars}</div>
+      <div style="position:relative;height:8px;"><div style="position:absolute;left:${prog}%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:7px solid var(--text);margin-top:1px;"></div></div>
+    </div>
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;">
+      <div style="font-size:13px;font-weight:500;margin-bottom:4px;">${phase.name} — week ${weeksIn}</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;">${phase.desc}</div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:10px;">Race date placeholder: 10 Oct 2026 — update once confirmed.</div>`;
+  renderMilestones();
+}
+
+function renderMilestones(){
+  const allP=sessions.flatMap(s=>s.intervals.filter(iv=>iv.pace).map(iv=>iv.pace));
+  const bestIv=allP.length?Math.min(...allP):null;
+  const ms=[
+    {label:'First session logged',done:sessions.length>0},
+    {label:'Walk break shortened to 1:00',done:sessions.some(s=>s.walkSec>0&&s.walkSec<=60)},
+    {label:'Run interval extended to 2:00',done:sessions.some(s=>s.runSec>=120)},
+    {label:'Single interval hits training target (sub 5:30/km)',done:bestIv!=null&&bestIv<=TRAIN_MAX},
+    {label:'Avg session pace hits race target (sub 6:30/km)',done:sessions.some(s=>s.avgPace&&s.avgPace<=RACE_MAX)},
+    {label:'Avg session pace hits training target (sub 5:30/km)',done:sessions.some(s=>s.avgPace&&s.avgPace<=TRAIN_MAX)},
+    {label:'10 intervals in a session',done:sessions.some(s=>s.reps>=10)},
+    {label:'15 intervals in a session',done:sessions.some(s=>s.reps>=15)},
+    {label:'Run interval extended to 3:00',done:sessions.some(s=>s.runSec>=180)},
+    {label:'Run interval extended to 5:00',done:sessions.some(s=>s.runSec>=300)},
+    {label:'10 sessions logged',done:sessions.length>=10},
+    {label:'20 sessions logged',done:sessions.length>=20},
+  ];
+  document.getElementById('milestonesWrap').innerHTML=ms.map(m=>`
+    <div class="milestone"><div class="ms-dot ${m.done?'ms-done':'ms-todo'}"></div>
+    <span style="color:${m.done?'var(--text)':'var(--text3)'}">${m.label}</span>
+    ${m.done?'<span class="badge b-race" style="margin-left:auto;">Done</span>':''}</div>`).join('');
+}
+
+function renderHistory(){
+  const sorted=[...sessions].sort((a,b)=>b.date.localeCompare(a.date));
+  const card=document.getElementById('historyCard');
+  if(!sorted.length){card.innerHTML='<div class="empty">No sessions yet.</div>';return;}
+  card.innerHTML=`<table class="run-table">
+    <colgroup><col style="width:90px"><col><col style="width:75px"><col style="width:65px"><col style="width:65px"><col style="width:auto"></colgroup>
+    <thead><tr><th>Date</th><th>Protocol</th><th>Avg pace</th><th>Best</th><th>Cadence</th><th>vs targets</th></tr></thead>
+    <tbody>${sorted.map((s,i)=>`<tr onclick="openDetail(${i})">
+      <td class="mono" style="font-size:13px;">${s.date}</td>
+      <td style="color:var(--text2);">${protoStr(s)}${s.note?`<span class="note-tag">${s.note}</span>`:''}${s.runSec>=120?'<span style="margin-left:6px;font-size:10px;color:var(--amber)">▲ protocol</span>':''}</td>
+      <td class="mono">${fmtPace(s.avgPace)}</td>
+      <td class="mono" style="color:var(--purple)">${fmtPace(s.bestPace)}</td>
+      <td style="color:var(--text2)">${s.avgCad?s.avgCad+' spm':'—'}</td>
+      <td>${paceLabel(s.avgPace)}</td>
+    </tr>`).join('')}</tbody>
+  </table>
+  <div class="hint">Click a session to see interval breakdown, fade score, and pace chart. * on interval label = note attached. ▲ = protocol change.</div>`;
+}
+
+function dC(k){if(charts[k]){charts[k].destroy();delete charts[k];}}
+
+function renderCharts(){
+  const sorted=[...sessions].sort((a,b)=>a.date.localeCompare(b.date));
+  const pr=sorted.filter(s=>s.avgPace);
+  dC('pace');
+  if(pr.length){
+    charts.pace=new Chart(document.getElementById('cPace'),{
+      type:'line',
+      data:{labels:pr.map(s=>s.date.slice(5)),datasets:[
+        {label:'Pace',data:pr.map(s=>Math.round(s.avgPace*100)/100),borderColor:'transparent',fill:false,tension:0.3,pointRadius:6,pointBackgroundColor:pr.map(s=>s.runSec>=120?'#f59e0b':'#60a5fa'),pointBorderColor:pr.map(s=>s.runSec>=120?'#f59e0b':'#60a5fa'),segment:{borderColor:ctx=>pr[Math.max(ctx.p0DataIndex,ctx.p1DataIndex)]?.runSec>=120?'#f59e0b':'#60a5fa',}},
+        {label:'TMax',data:pr.map(()=>TRAIN_MAX),type:'line',borderColor:'rgba(167,139,250,0.5)',borderDash:[4,3],pointRadius:0,fill:'+1',backgroundColor:'rgba(167,139,250,0.07)'},
+        {label:'TMin',data:pr.map(()=>TRAIN_MIN),type:'line',borderColor:'rgba(167,139,250,0.5)',borderDash:[4,3],pointRadius:0,fill:false},
+        {label:'RMax',data:pr.map(()=>RACE_MAX),type:'line',borderColor:'rgba(61,220,151,0.4)',borderDash:[3,2],pointRadius:0,fill:'+1',backgroundColor:'rgba(61,220,151,0.05)'},
+        {label:'RMin',data:pr.map(()=>RACE_MIN),type:'line',borderColor:'rgba(61,220,151,0.4)',borderDash:[3,2],pointRadius:0,fill:false},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${fmtPace(ctx.raw)}/km · ${protoStr(pr[ctx.dataIndex])}`}}},
+        scales:{x:{grid:{display:false},ticks:{color:'#555550',font:{size:11}}},y:{reverse:true,min:4.5,max:10,grid:{color:'#1e1e1e'},ticks:{color:'#555550',font:{size:11},callback:cTick}}}}
+    });
+  }
+  const wM={};
+  sorted.forEach(s=>{const d=new Date(s.date),m=new Date(d);m.setDate(d.getDate()-((d.getDay()+6)%7));const k=m.toISOString().slice(5,10);wM[k]=(+(((wM[k]||0)+s.totalRunMin).toFixed(1)));});
+  const wks=Object.keys(wM).sort();
+  dC('volume');
+  if(wks.length)charts.volume=new Chart(document.getElementById('cVolume'),{type:'bar',data:{labels:wks,datasets:[{label:'min',data:wks.map(w=>wM[w]),backgroundColor:'#3ddc97',borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#555550',font:{size:11},autoSkip:false,maxRotation:45}},y:{grid:{color:'#1e1e1e'},ticks:{color:'#555550',font:{size:11}}}}}});
+  dC('ratio');
+  if(sorted.length)charts.ratio=new Chart(document.getElementById('cRatio'),{type:'bar',data:{labels:sorted.map(s=>s.date.slice(5)),datasets:[{label:'Running',data:sorted.map(s=>s.totalRunMin),backgroundColor:'#3ddc97'},{label:'Walking',data:sorted.map(s=>s.totalWalkMin),backgroundColor:'#334155'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,grid:{display:false},ticks:{color:'#555550',font:{size:11}}},y:{stacked:true,grid:{color:'#1e1e1e'},ticks:{color:'#555550',font:{size:11}}}}}});
+  const sc=sorted.filter(s=>spread(s)!==null);
+  dC('spread');
+  if(sc.length)charts.spread=new Chart(document.getElementById('cSpread'),{type:'bar',data:{labels:sc.map(s=>s.date.slice(5)),datasets:[{label:'Spread',data:sc.map(s=>spread(s)),backgroundColor:sc.map(s=>{const sp=spread(s);return sp>120?'#f87171':sp>60?'#f59e0b':'#3ddc97';}),borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.raw}s between fastest and slowest interval`}}},scales:{x:{grid:{display:false},ticks:{color:'#555550',font:{size:11}}},y:{grid:{color:'#1e1e1e'},ticks:{color:'#555550',font:{size:11},callback:v=>v+'s'}}}}});
+  const cr=sorted.filter(s=>s.avgCad);
+  dC('cad');
+  if(cr.length)charts.cad=new Chart(document.getElementById('cCad'),{type:'line',data:{labels:cr.map(s=>s.date.slice(5)),datasets:[{label:'Cadence',data:cr.map(s=>s.avgCad),borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,0.08)',fill:true,tension:0.3,pointRadius:5,pointBackgroundColor:'#f59e0b'},{label:'Target',data:cr.map(()=>165),borderColor:'rgba(61,220,151,0.4)',borderDash:[4,3],pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{color:'#555550',font:{size:11}}},y:{min:140,max:180,grid:{color:'#1e1e1e'},ticks:{color:'#555550',font:{size:11}}}}}});
+}
+
+function renderInsights(){
+  const card=document.getElementById('insightsCard');
+  if(!sessions.length){card.innerHTML='<div class="empty">Log your first session to unlock insights.</div>';return;}
+  const sorted=[...sessions].sort((a,b)=>a.date.localeCompare(b.date));
+  const latest=sorted[sorted.length-1];
+  const prev=sorted.length>1?sorted[sorted.length-2]:null;
+  const allPaces=sessions.flatMap(s=>s.intervals.filter(iv=>iv.pace).map(iv=>iv.pace));
+  const bestEver=allPaces.length?Math.min(...allPaces):null;
+  const ins=[];
+
+  // Protocol status
+  const protocolChange=prev&&(prev.runSec!==latest.runSec||prev.walkSec!==latest.walkSec);
+  const latestProto=`${Math.round(latest.runSec/60*10)/10}min run / ${Math.round(latest.walkSec/60*10)/10}min walk`;
+  if(protocolChange){
+    ins.push({c:'#f59e0b',l:'Protocol shift',t:`You moved to ${latestProto} this session — a significant step up in load. The pace dip is expected and temporary. Give it 3–4 sessions at this protocol before judging how your fitness sits against it.`});
+  } else {
+    const sameProt=sorted.filter(s=>s.runSec===latest.runSec&&s.walkSec===latest.walkSec&&s.avgPace);
+    if(sameProt.length>=2){
+      const diffSec=Math.round((sameProt[0].avgPace-sameProt[sameProt.length-1].avgPace)*60);
+      if(diffSec>5)ins.push({c:'#3ddc97',l:'Pace progression',t:`At the ${latestProto} protocol, avg pace has improved by ${diffSec}s/km over ${sameProt.length} sessions (${fmtPace(sameProt[0].avgPace)} → ${fmtPace(sameProt[sameProt.length-1].avgPace)}). Genuine fitness gain.`});
+    }
+  }
+
+  // Overall trend
+  const allPaced=sorted.filter(s=>s.avgPace);
+  if(allPaced.length>=4){
+    const n=Math.min(3,Math.floor(allPaced.length/2));
+    const early=allPaced.slice(0,n).reduce((a,s)=>a+s.avgPace,0)/n;
+    const recent=allPaced.slice(-n).reduce((a,s)=>a+s.avgPace,0)/n;
+    const diff=Math.round((early-recent)*60);
+    if(diff>10)ins.push({c:'#60a5fa',l:'Overall trend',t:`Across all ${allPaced.length} sessions, you've improved avg pace by ~${diff}s/km comparing your first and most recent three sessions. That's a meaningful fitness shift.`});
+  }
+
+  // Best interval vs targets
+  if(bestEver!=null){
+    if(bestEver<=TRAIN_MAX)ins.push({c:'#a78bfa',l:'Training target',t:`Best interval ever: ${fmtPace(bestEver)}/km — inside your training target zone. The goal now is making that pace feel repeatable across all intervals, not just the push rep.`});
+    else if(bestEver<=RACE_MAX)ins.push({c:'#3ddc97',l:'Race target',t:`Best interval (${fmtPace(bestEver)}/km) is inside race target range. Training target (sub 5:30/km) is ${Math.round((bestEver-TRAIN_MAX)*60)}s/km away — it'll come.`});
+    else ins.push({c:'#60a5fa',l:'Pace targets',t:`Best interval: ${fmtPace(bestEver)}/km. Race target is ${Math.round((bestEver-RACE_MAX)*60)}s/km away, training target ${Math.round((bestEver-TRAIN_MAX)*60)}s/km. Both are within reach.`});
+  }
+
+  // Latest session fade
+  const f=fade(latest);
+  if(f!==null){
+    if(f>30)ins.push({c:'#f59e0b',l:'Pacing — latest session',t:`You faded ~${f}s/km in the second half of your last session. ${protocolChange?'Expected at a new protocol — your aerobic system is adapting.':'Try starting slightly more conservatively to even out the second half.'}`});
+    else if(f>10)ins.push({c:'#f59e0b',l:'Pacing — latest session',t:`Minor fade of ${f}s/km in the second half — almost there on even pacing. Try keeping intervals 6–10 within 10s/km of your first-half average.`});
+    else ins.push({c:'#3ddc97',l:'Pacing — latest session',t:`Strong pacing in your last session — minimal fade across all intervals. Holding pace under fatigue is exactly what Hyrox demands.`});
+  }
+
+  // Consistency trend
+  const spreads=sorted.filter(s=>spread(s)!==null);
+  if(spreads.length>=3){
+    const recent3=spreads.slice(-3).map(s=>spread(s));
+    const first3=spreads.slice(0,3).map(s=>spread(s));
+    const rAvg=Math.round(recent3.reduce((a,b)=>a+b,0)/3);
+    const fAvg=Math.round(first3.reduce((a,b)=>a+b,0)/3);
+    if(rAvg<fAvg-15)ins.push({c:'#3ddc97',l:'Consistency',t:`Pace spread (fastest to slowest interval) has tightened from ~${fAvg}s to ~${rAvg}s across sessions. You're running more evenly — a clear sign of improving aerobic fitness.`});
+    else if(rAvg>fAvg+20)ins.push({c:'#f59e0b',l:'Consistency',t:`Pace spread has widened recently (~${rAvg}s vs ~${fAvg}s earlier). This often reflects higher effort protocols — expected, but worth watching as the protocol stabilises.`});
+  }
+
+  // Cadence
+  const recentCads=sorted.filter(s=>s.avgCad).slice(-3).map(s=>s.avgCad);
+  if(recentCads.length){
+    const ac=Math.round(recentCads.reduce((a,b)=>a+b,0)/recentCads.length);
+    ins.push({c:'#f59e0b',l:'Cadence',t:`Recent avg cadence: ${ac} spm. ${ac>=163?'Looking solid for your current phase — it will naturally increase further as you get fitter and intervals get longer.':'Focus on quick light feet rather than long strides. Cadence tends to improve naturally with fitness.'}`});
+  }
+
+  // What to focus on next — dynamically based on current protocol
+  let nextFocus;
+  if(latest.runSec<120)nextFocus=`Next protocol shift: once 1:30/1:30 feels comfortable across all 10 intervals with minimal fade, move to 2:00 run / 1:00 walk.`;
+  else if(latest.runSec<180)nextFocus=`Focus: nail consistency at 2:00/1:00. When second-half pace matches first-half pace consistently, you're ready to extend to 3:00 intervals.`;
+  else if(latest.runSec<300)nextFocus=`Working toward 5-minute intervals — once there, you're within striking distance of continuous running at race pace.`;
+  else nextFocus=`You're running long intervals. Focus on merging them with minimal walk breaks, building toward continuous 8km.`;
+  ins.push({c:'#555550',l:'Next focus',t:nextFocus});
+
+  card.innerHTML=ins.map(i=>`<div class="insight"><span class="idot" style="background:${i.c}"></span><div><div class="insight-label" style="color:${i.c}">${i.l}</div><div class="insight-text">${i.t}</div></div></div>`).join('');
+}
+
+// Generate focus targets for a given session (used for both display and evaluation)
+function generateFocuses(session, prevSession, allSessions){
+  const sorted=allSessions.sort((a,b)=>a.date.localeCompare(b.date));
+  const sameProt=sorted.filter(s=>s.runSec===session.runSec&&s.walkSec===session.walkSec);
+  const f=fade(session);
+  const sp=spread(session);
+  const paces=session.intervals.filter(iv=>iv.pace).map(iv=>iv.pace);
+  const protocolChange=prevSession&&(prevSession.runSec!==session.runSec||prevSession.walkSec!==session.walkSec);
+  const focuses=[];
+  if(!paces.length)return focuses;
+  const avg=session.avgPace;
+  const midPaces=paces.slice(1,paces.length-1);
+  const midAvg=midPaces.length?midPaces.reduce((a,b)=>a+b,0)/midPaces.length:avg;
+
+  // Focus 1: pacing
+  if(protocolChange){
+    const targetStartPace=fmtPace((Math.round(avg*60+10))/60);
+    focuses.push({id:'start_conservative',icon:'🎯',color:'var(--amber)',title:'Start conservative',
+      what:`Begin each interval at around ${targetStartPace}/km — deliberately 10–15 seconds slower than you think you need to.`,
+      why:`Your last session was your first at ${Math.round(session.runSec/60*10)/10}min intervals. Starting too fast is the most common reason for a big fade at a new protocol. Lock in a controlled start and let the later intervals feel easier.`,
+      metric:`Last session avg: ${fmtPace(avg)}/km · Aim to start at ${targetStartPace}/km`,
+      targets:{startPaceTarget:(Math.round(avg*60+10))/60, fadeTarget:null}});
+  } else if(f!==null&&f>20){
+    const firstHalf=paces.slice(0,Math.floor(paces.length/2));
+    const firstAvg=firstHalf.reduce((a,b)=>a+b,0)/firstHalf.length;
+    focuses.push({id:'even_pace',icon:'⚖️',color:'var(--amber)',title:'Even pace — hold back early',
+      what:`Target ${fmtPace(firstAvg+0.1)}/km on intervals 1–3. If that feels easy, stay there anyway.`,
+      why:`You faded ${f}s/km in the second half last time. The fix isn't to push harder at the end — it's to start slightly slower so you have something left. A boring even session beats a fast start and a dying finish.`,
+      metric:`Last session fade: +${f}s/km in 2nd half`,
+      targets:{fadeTarget:f, prevFade:f}});
+  } else if(f!==null&&f<=10&&avg>RACE_MAX){
+    focuses.push({id:'push_middle',icon:'📈',color:'var(--green)',title:'Push the middle intervals',
+      what:`Intervals 4–7: aim for ${fmtPace(midAvg-0.1)}/km. These are your "honest" intervals — not the adrenaline of the start, not a deliberate push at the end.`,
+      why:`Your pacing was consistent last session — that's the foundation sorted. Now use that consistency to shift the whole session slightly faster. The middle is where real fitness shows.`,
+      metric:`Last session mid-interval avg: ${fmtPace(midAvg)}/km`,
+      targets:{midAvgTarget:midAvg-0.1, prevMidAvg:midAvg}});
+  } else if(avg<=RACE_MAX){
+    focuses.push({id:'hold_floor',icon:'🔒',color:'var(--green)',title:`Hold ${fmtPace(RACE_MAX)}/km across every interval`,
+      what:`Set a floor, not just a ceiling. Every interval: at least ${fmtPace(RACE_MAX)}/km, including the ones where you're tired.`,
+      why:`You're hitting race target pace on average — the next challenge is eliminating the slow outliers. Closing the floor is as important as lifting the ceiling.`,
+      metric:`Last session avg: ${fmtPace(avg)}/km · Race target: ${fmtPace(RACE_MAX)}/km`,
+      targets:{floorTarget:RACE_MAX, prevFloorMisses:paces.filter(p=>p>RACE_MAX).length}});
+  }
+
+  // Focus 2: technique/specific
+  const slowIvs=session.intervals.filter(iv=>iv.pace&&iv.cad&&iv.pace>RACE_MAX+0.3);
+  const fastIvs=session.intervals.filter(iv=>iv.pace&&iv.cad&&iv.pace<=RACE_MAX);
+  const slowCad=slowIvs.length?Math.round(slowIvs.reduce((a,b)=>a+b.cad,0)/slowIvs.length):null;
+  const fastCad=fastIvs.length?Math.round(fastIvs.reduce((a,b)=>a+b.cad,0)/fastIvs.length):null;
+  const cadDrop=slowCad&&fastCad&&(fastCad-slowCad)>3;
+  const allSP=sameProt.filter(s=>s.intervals.length>=6);
+  let weakPos=null;
+  if(allSP.length>=2){
+    const nIv=Math.min(...allSP.map(s=>s.intervals.length));
+    const posAvgs=[];
+    for(let i=0;i<nIv;i++){
+      const pp=allSP.map(s=>s.intervals[i]).filter(iv=>iv&&iv.pace).map(iv=>iv.pace);
+      if(pp.length)posAvgs.push({pos:i+1,avg:pp.reduce((a,b)=>a+b,0)/pp.length});
+    }
+    if(posAvgs.length>=4){
+      const oa=posAvgs.reduce((a,b)=>a+b.avg,0)/posAvgs.length;
+      const worst=posAvgs.reduce((a,b)=>a.avg>b.avg?a:b);
+      if(worst.avg>oa+0.15)weakPos=worst;
+    }
+  }
+
+  if(cadDrop){
+    focuses.push({id:'quick_feet',icon:'👟',color:'var(--amber)',title:'Quick feet on the slower intervals',
+      what:`When you feel yourself slowing down, focus on cadence first — shorter, faster steps — rather than pushing harder.`,
+      why:`Your cadence dropped on slower intervals last session (${slowCad} spm vs ${fastCad} spm on faster ones). Slower pace + lower cadence usually means you're landing heavy and braking.`,
+      metric:`Cadence on slow intervals: ${slowCad} spm vs fast intervals: ${fastCad} spm`,
+      targets:{prevSlowCad:slowCad, prevFastCad:fastCad}});
+  } else if(weakPos&&weakPos.pos>=3&&weakPos.pos<=7){
+    focuses.push({id:'weak_spot',icon:'💪',color:'var(--purple)',title:`Interval #${weakPos.pos} is your weak spot`,
+      what:`Going into interval #${weakPos.pos}, shake out your arms, take a full breath during the walk break, and commit to matching your interval #2 pace.`,
+      why:`Across your sessions at this protocol, interval #${weakPos.pos} averages ${fmtPace(weakPos.avg)}/km — consistently slower than the others.`,
+      metric:`Interval #${weakPos.pos} avg: ${fmtPace(weakPos.avg)}/km`,
+      targets:{weakPos:weakPos.pos, prevWeakAvg:weakPos.avg}});
+  } else if(sp!==null&&sp>90){
+    const slowest=paces.indexOf(Math.max(...paces))+1;
+    focuses.push({id:'bring_up_floor',icon:'🎯',color:'var(--purple)',title:'Bring up the floor',
+      what:`Focus on your slowest intervals. When a rep starts to feel hard, stay tall, keep your arms driving, and hold form for the full ${Math.round(session.runSec/60*10)/10} minutes.`,
+      why:`Your pace spread was ${sp}s last session — interval #${slowest} was your slowest. Even pacing across 10 reps is closer to what race day demands than one great interval.`,
+      metric:`Pace spread last session: ${sp}s between fastest and slowest`,
+      targets:{prevSpread:sp}});
+  } else {
+    const allBest=allSessions.filter(s=>s.bestPace).map(s=>s.bestPace);
+    const everBest=allBest.length?Math.min(...allBest):session.bestPace;
+    focuses.push({id:'push_interval',icon:'🚀',color:'var(--purple)',title:'Make your push interval count',
+      what:`On interval 9 or 10, run at the fastest pace you can sustain for the full duration — controlled hard, not a sprint. Aim to beat ${fmtPace(everBest)}/km.`,
+      why:`Your pacing is consistent and controlled. The push rep is how you teach your body what faster feels like.`,
+      metric:`Best interval ever: ${fmtPace(everBest)}/km`,
+      targets:{bestTarget:everBest}});
+  }
+
+  // Focus 3: structural
+  if(protocolChange&&sameProt.length<=2){
+    focuses.push({id:'stay_course',icon:'📋',color:'var(--blue)',title:'Same protocol, different mindset',
+      what:`Keep the ${Math.round(session.runSec/60*10)/10}min / ${Math.round(session.walkSec/60*10)/10}min protocol. Don't change anything yet.`,
+      why:`You've only done ${sameProt.length} session${sameProt.length>1?'s':''} at this protocol. Your body is still adapting.`,
+      metric:`Sessions at current protocol: ${sameProt.length}`,
+      targets:{expectedRunSec:session.runSec, expectedWalkSec:session.walkSec}});
+  } else if(sameProt.length>=4&&f!==null&&f<=15&&sp!==null&&sp<80){
+    focuses.push({id:'ready_progress',icon:'⬆️',color:'var(--green)',title:'You might be ready to progress',
+      what:`If this session feels controlled and you finish strong, consider moving to ${session.runSec<180?'3:00 run / 1:00 walk':'5:00 run / 1:00 walk'} next time.`,
+      why:`You've done ${sameProt.length} sessions at ${Math.round(session.runSec/60*10)/10}min intervals with good consistency (spread ~${sp}s, fade ~${f}s).`,
+      metric:`Sessions at this protocol: ${sameProt.length} · Spread: ${sp}s · Fade: ${f}s`,
+      targets:{expectedRunSec:session.runSec, expectedWalkSec:session.walkSec}});
+  } else {
+    const remaining=Math.max(0,4-sameProt.length);
+    if(remaining>0){
+      focuses.push({id:'stay_course',icon:'📋',color:'var(--blue)',title:'Stay the course',
+        what:`Stick with ${Math.round(session.runSec/60*10)/10}min / ${Math.round(session.walkSec/60*10)/10}min for at least ${remaining} more session${remaining>1?'s':''}.`,
+        why:`Consistency at a protocol builds more fitness than jumping ahead. Aim for 4 solid sessions before considering an increase.`,
+        metric:`Sessions at current protocol: ${sameProt.length} of ~4 recommended`,
+        targets:{expectedRunSec:session.runSec, expectedWalkSec:session.walkSec}});
+    }
+  }
+  return focuses;
+}
+
+// Evaluate how well the focuses from prevSession were achieved in currentSession
+function evaluateFocuses(focuses, prevSession, currentSession){
+  return focuses.map(f=>{
+    const t=f.targets||{};
+    let achieved=null; // true / 'partial' / false
+    let verdict='';
+    let detail='';
+
+    if(f.id==='start_conservative'){
+      // Did first interval pace come in at or below target?
+      const firstPace=currentSession.intervals[0]?.pace;
+      if(firstPace!=null&&t.startPaceTarget!=null){
+        if(firstPace<=t.startPaceTarget+0.05){achieved=true;verdict='Nailed it';detail=`First interval: ${fmtPace(firstPace)}/km — right in the conservative zone.`;}
+        else if(firstPace<=t.startPaceTarget+0.2){achieved='partial';verdict='Close';detail=`First interval was ${fmtPace(firstPace)}/km — slightly faster than the ${fmtPace(t.startPaceTarget)}/km target. Didn't hurt you badly, but watch the opener next time.`;}
+        else{achieved=false;verdict='Not achieved';detail=`First interval was ${fmtPace(firstPace)}/km — you went out ${Math.round((firstPace-t.startPaceTarget)*-60)}s/km too fast. This is likely what caused any fade later in the session.`;}
+      }
+    } else if(f.id==='even_pace'){
+      const newFade=fade(currentSession);
+      if(newFade!=null&&t.prevFade!=null){
+        if(newFade<=10){achieved=true;verdict='Nailed it';detail=`Fade dropped to just ${newFade}s/km — that's even pacing. Well done.`;}
+        else if(newFade<t.prevFade-10){achieved='partial';verdict='Improving';detail=`Fade reduced from ${t.prevFade}s to ${newFade}s/km — better, but still fading. Keep starting conservatively.`;}
+        else{achieved=false;verdict='Still fading';detail=`Fade was ${newFade}s/km — barely changed from last time (${t.prevFade}s). You're still going out too hard early. Start the next session 15s/km slower than feels comfortable on interval 1.`;}
+      }
+    } else if(f.id==='push_middle'){
+      const newMidPaces=currentSession.intervals.slice(1,currentSession.intervals.length-1).filter(iv=>iv.pace).map(iv=>iv.pace);
+      const newMidAvg=newMidPaces.length?newMidPaces.reduce((a,b)=>a+b,0)/newMidPaces.length:null;
+      if(newMidAvg!=null&&t.prevMidAvg!=null){
+        if(newMidAvg<=t.midAvgTarget+0.05){achieved=true;verdict='Nailed it';detail=`Middle interval avg: ${fmtPace(newMidAvg)}/km — hit the target. The middle is where the fitness shows.`;}
+        else if(newMidAvg<t.prevMidAvg-0.03){achieved='partial';verdict='Improving';detail=`Middle avg improved to ${fmtPace(newMidAvg)}/km (from ${fmtPace(t.prevMidAvg)}/km) — moving in the right direction but not quite at the ${fmtPace(t.midAvgTarget)}/km target.`;}
+        else{achieved=false;verdict='Not achieved';detail=`Middle interval avg was ${fmtPace(newMidAvg)}/km — essentially unchanged from last session (${fmtPace(t.prevMidAvg)}/km). Focus here again next run.`;}
+      }
+    } else if(f.id==='hold_floor'){
+      const newPaces=currentSession.intervals.filter(iv=>iv.pace).map(iv=>iv.pace);
+      const misses=newPaces.filter(p=>p>RACE_MAX).length;
+      const prevMisses=t.prevFloorMisses||0;
+      if(misses===0){achieved=true;verdict='Nailed it';detail:`Every interval hit ${fmtPace(RACE_MAX)}/km or faster. That's race-ready consistency.`;}
+      else if(misses<prevMisses){achieved='partial';verdict='Improving';detail:`${misses} interval${misses>1?'s':''} missed the ${fmtPace(RACE_MAX)}/km floor — down from ${prevMisses} last session. Getting there.`;}
+      else{achieved=false;verdict='Not achieved';detail:`${misses} interval${misses>1?'s':''} fell below ${fmtPace(RACE_MAX)}/km — same as last session. Identify which intervals are slow and target those specifically next time.`;}
+    } else if(f.id==='quick_feet'){
+      const newSlowIvs=currentSession.intervals.filter(iv=>iv.pace&&iv.cad&&iv.pace>RACE_MAX+0.3);
+      const newSlowCad=newSlowIvs.length?Math.round(newSlowIvs.reduce((a,b)=>a+b.cad,0)/newSlowIvs.length):null;
+      if(newSlowCad!=null&&t.prevSlowCad!=null){
+        if(newSlowCad>=t.prevSlowCad+3){achieved=true;verdict='Nailed it';detail:`Cadence on slow intervals lifted to ${newSlowCad} spm (up from ${t.prevSlowCad} spm). Quick feet making a difference.`;}
+        else if(newSlowCad>=t.prevSlowCad){achieved='partial';verdict='Slight improvement';detail:`Cadence on slow intervals: ${newSlowCad} spm vs ${t.prevSlowCad} spm last time — marginal improvement. Keep focusing on quick light steps when pace drops.`;}
+        else{achieved=false;verdict='Not achieved';detail:`Cadence on slow intervals actually dropped to ${newSlowCad} spm (from ${t.prevSlowCad} spm). When you feel the pace going, actively think "quick feet" — it should feel almost shuffly.`;}
+      }
+    } else if(f.id==='weak_spot'||f.id==='bring_up_floor'){
+      const newSpread=spread(currentSession);
+      const prevSpread=t.prevSpread||t.prevWeakAvg&&100;
+      if(newSpread!=null){
+        if(newSpread<60){achieved=true;verdict='Nailed it';detail:`Pace spread tightened to ${newSpread}s — consistently strong across all intervals.`;}
+        else if(prevSpread&&newSpread<prevSpread-10){achieved='partial';verdict='Improving';detail:`Spread reduced to ${newSpread}s (from ${prevSpread}s) — better, but keep bringing up those slower intervals.`;}
+        else{achieved=false;verdict='Still inconsistent';detail:`Pace spread was ${newSpread}s — not much change. Identify your weakest interval next session and mentally commit to it before it starts.`;}
+      }
+    } else if(f.id==='push_interval'){
+      const newBest=currentSession.bestPace;
+      if(newBest!=null&&t.bestTarget!=null){
+        if(newBest<t.bestTarget-0.02){achieved=true;verdict='New best!';detail:`Best interval: ${fmtPace(newBest)}/km — a new personal best. That's your ceiling moving.`;}
+        else if(newBest<=t.bestTarget+0.05){achieved='partial';verdict='Matched it';detail:`Best interval: ${fmtPace(newBest)}/km — matched your previous best. Push a little harder on that final rep next time.`;}
+        else{achieved=false;verdict='Missed the target';detail:`Best interval was ${fmtPace(newBest)}/km — didn't beat the ${fmtPace(t.bestTarget)}/km target. Make sure you're saving something for the push rep and not leaving it til the last interval when you're already spent.`;}
+      }
+    } else if(f.id==='stay_course'||f.id==='ready_progress'){
+      if(t.expectedRunSec!=null){
+        if(currentSession.runSec===t.expectedRunSec&&currentSession.walkSec===t.expectedWalkSec){achieved=true;verdict='Done';detail:`Stayed at ${Math.round(currentSession.runSec/60*10)/10}min / ${Math.round(currentSession.walkSec/60*10)/10}min — consistent.`;}
+        else{achieved=f.id==='ready_progress'?true:false;verdict=f.id==='ready_progress'?'Progressed!':'Changed protocol';detail=f.id==='ready_progress'?`You moved up to ${Math.round(currentSession.runSec/60*10)/10}min intervals — good call if the session felt controlled.`:`Changed to ${Math.round(currentSession.runSec/60*10)/10}min / ${Math.round(currentSession.walkSec/60*10)/10}min. If that was intentional and the session went well, fine. If it was impulsive, be careful — jumping protocols too fast risks injury.`;}
+      }
+    }
+
+    return {...f, achieved, verdict, detail};
+  }).filter(f=>f.achieved!==null);
+}
+
+function focusCardHTML(f, i, isReview=false, achieved=null, verdict='', detail=''){
+  const borderColor=isReview?(achieved===true?'var(--green)':achieved==='partial'?'var(--amber)':'var(--red)'):f.color;
+  const statusIcon=achieved===true?'✓':achieved==='partial'?'◐':'✗';
+  const statusColor=achieved===true?'var(--green)':achieved==='partial'?'var(--amber)':'var(--red)';
+  return `<div style="background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:12px;border-left:3px solid ${borderColor};">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+      <span style="font-size:18px;">${f.icon}</span>
+      <div style="flex:1;">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:${f.color};margin-bottom:1px;">${isReview?'Previous focus':'Focus '+(i+1)}</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);">${f.title}</div>
+      </div>
+      ${isReview?`<div style="text-align:right;flex-shrink:0;"><div style="font-size:18px;">${statusIcon}</div><div style="font-size:10px;font-weight:600;color:${statusColor};text-transform:uppercase;letter-spacing:0.05em;">${verdict}</div></div>`:''}
+    </div>
+    ${isReview?`<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:8px;border-left:2px solid ${statusColor};"><div style="font-size:13px;color:var(--text);line-height:1.6;">${detail}</div></div>`:`
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:10px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">What to do</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.6;">${f.what}</div>
+    </div>
+    <div style="margin-bottom:8px;">
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">Why</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.6;">${f.why}</div>
+    </div>`}
+    <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--text3);padding-top:8px;border-top:0.5px solid var(--border);">${f.metric}</div>
+  </div>`;
+}
+
+function renderNextRun(){
+  const card=document.getElementById('nextRunCard');
+  if(!sessions.length){card.innerHTML='<div class="empty">Log a session first to generate your next run focus.</div>';return;}
+  const sorted=[...sessions].sort((a,b)=>a.date.localeCompare(b.date));
+  const latest=sorted[sorted.length-1];
+  const prev=sorted.length>1?sorted[sorted.length-2]:null;
+  const prevPrev=sorted.length>2?sorted[sorted.length-3]:null;
+  let html='';
+
+  // --- LAST RUN REVIEW ---
+  if(prev&&sorted.length>=2){
+    const prevFocuses=generateFocuses(prev, prevPrev, sorted.slice(0,-1));
+    const evaluated=evaluateFocuses(prevFocuses, prev, latest);
+    if(evaluated.length){
+      const allGood=evaluated.every(e=>e.achieved===true);
+      const anyBad=evaluated.some(e=>e.achieved===false);
+      html+=`<div style="margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Last run review <span style="font-size:11px;color:var(--text3);font-weight:400;">· ${latest.date}</span></div>
+        <div style="font-size:13px;color:${allGood?'var(--green)':anyBad?'var(--red)':'var(--amber)'};">${allGood?'Strong session — all focuses achieved.':anyBad?'Some areas need more work — details below.':'Partial — some good, some to keep working on.'}</div>
+      </div>`;
+      html+=evaluated.map(e=>focusCardHTML(e,0,true,e.achieved,e.verdict,e.detail)).join('');
+      html+=`<div style="height:1px;background:var(--border);margin:20px 0;"></div>`;
+    }
+  }
+
+  // --- NEXT RUN FOCUSES ---
+  const focuses=generateFocuses(latest, prev, sorted);
+  html+=`<div style="margin-bottom:16px;">
+    <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px;">Next run focus</div>
+    <div style="font-size:13px;color:var(--text2);">Based on ${latest.date} · ${protoStr(latest)}</div>
+  </div>`;
+  html+=focuses.map((f,i)=>focusCardHTML(f,i,false)).join('');
+  html+=`<div style="font-size:11px;color:var(--text3);padding-top:4px;">Updates automatically after each session you log.</div>`;
+  card.innerHTML=html;
+}
+
+function renderMetrics(){
+  document.getElementById('m-runs').textContent=sessions.length;
+  document.getElementById('m-time').textContent=Math.round(sessions.reduce((s,r)=>s+r.totalRunMin,0));
+  const paced=sessions.filter(s=>s.avgPace);
+  document.getElementById('m-pace').textContent=paced.length?fmtPace(paced.reduce((s,r)=>s+r.avgPace,0)/paced.length):'—';
+  const allBest=sessions.filter(s=>s.bestPace);
+  document.getElementById('m-best').textContent=allBest.length?fmtPace(Math.min(...allBest.map(s=>s.bestPace))):'—';
+}
+
+function render(){renderMetrics();renderPlan();renderHistory();renderCharts();renderInsights();renderNextRun();}
+
+function showPane(name,btn){
+  ['plan','nextrun','history','trends','insights','add'].forEach(t=>{const el=document.getElementById('pane-'+t);if(el)el.style.display=t===name?'block':'none';});
+  if(name!=='history')closeDetail();
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  else document.querySelectorAll('.tab').forEach(b=>{if(b.textContent.toLowerCase().startsWith(name.slice(0,4)))b.classList.add('active');});
+}
+
+function exportCSV(){
+  if(!sessions.length){showStatus('No sessions to export.','s-err');return;}
+  const sorted=[...sessions].sort((a,b)=>a.date.localeCompare(b.date));
+  let csv='Date,Reps,Run interval (sec),Walk interval (sec),Avg pace,Best pace,Avg cadence,Total run (min),Total dist (m),Note\n';
+  sorted.forEach(s=>{csv+=`${s.date},${s.reps},${s.runSec},${s.walkSec},${fmtPace(s.avgPace)},${fmtPace(s.bestPace)},${s.avgCad||''},${s.totalRunMin},${s.totalDist},"${s.note||''}"\n`;});
+  csv+='\nDate,Interval #,Distance (m),Pace,Cadence,Note\n';
+  sorted.forEach(s=>{s.intervals.forEach(iv=>{csv+=`${s.date},${iv.n},${iv.dist||''},${fmtPace(iv.pace)},${iv.cad||''},"${iv.note||''}"\n`;});});
+  const blob=new Blob([csv],{type:'text/csv'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='hyrox_training.csv';a.click();
+  showStatus('CSV exported.');
+}
+
+load();render();
+</script>
+</body>
+</html>
