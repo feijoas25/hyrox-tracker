@@ -289,16 +289,27 @@ async function load(){
     if(!res.ok)throw new Error('fetch failed');
     const rows=await res.json();
     if(rows.length>0){
+      // Supabase has data — use it
       sessions=rows.map(r=>calcStats(r.data));
-      setSyncStatus('ok','Synced');
+      setSyncStatus('ok','Synced · '+sessions.length+' sessions');
     } else {
-      // First time — seed with historical data
-      sessions=SEED.map(s=>calcStats(JSON.parse(JSON.stringify(s))));
-      await Promise.all(sessions.map(s=>supaUpsert(s)));
-      setSyncStatus('ok','Data seeded');
+      // Supabase is empty — check localStorage first
+      let localSessions=[];
+      try{const d=localStorage.getItem(STORE_KEY);if(d)localSessions=JSON.parse(d);}catch(_){}
+      if(localSessions.length>0){
+        // Push local data up to Supabase
+        sessions=localSessions.map(s=>calcStats(s));
+        await Promise.all(sessions.map(s=>supaUpsert(s)));
+        setSyncStatus('ok','Restored from local · '+sessions.length+' sessions');
+      } else {
+        // Nothing anywhere — seed with historical data
+        sessions=SEED.map(s=>calcStats(JSON.parse(JSON.stringify(s))));
+        await Promise.all(sessions.map(s=>supaUpsert(s)));
+        setSyncStatus('ok','Data seeded · '+sessions.length+' sessions');
+      }
     }
   } catch(e){
-    // Fallback to localStorage if offline
+    // Supabase unreachable — fall back to localStorage
     try{const d=localStorage.getItem(STORE_KEY);if(d)sessions=JSON.parse(d);}catch(_){}
     if(!sessions.length)sessions=SEED.map(s=>calcStats(JSON.parse(JSON.stringify(s))));
     setSyncStatus('err','Offline — showing cached data');
